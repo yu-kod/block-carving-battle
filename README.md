@@ -24,11 +24,13 @@ Block Carving Battleは、ブラウザ上で動作するリアルタイムパズ
 
 ```bash
 npm install
+```
 
 ### 2. 開発サーバーの起動
 
 ```bash
 npm run dev
+```
 
 起動後、ブラウザで http://localhost:5173/ にアクセスするとプロトタイプが確認できます。
 
@@ -42,6 +44,7 @@ block-carving-battle/
 │   └── ...               # その他のコンポーネント・モジュール
 ├── LICENSE               # MITライセンスファイル
 └── README.md             # このREADMEファイル
+```
 
 ## 貢献
 貢献は大歓迎です！
