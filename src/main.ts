@@ -1,7 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { initGame } from './game';
 import { createShape } from './shape';
-import { showClearMessage } from './ui';
 
 async function startApp() {
   // PixiJSの初期化
@@ -13,11 +12,38 @@ async function startApp() {
   });
   document.body.appendChild(app.canvas);
 
-  // お題の形を作成（上部に表示）
-  const targetShape = createShape(app);
+  let score = 0; // 🎯 スコア変数（0から始まる）
+  let isFirstRound = true; // 🎯 最初のラウンドかどうか判定
 
-  // ゲームの初期化（グリッド、ブロック）
-  initGame(app, targetShape, showClearMessage);
+  // 🎯 スコア表示テキスト（1回だけ作る）
+  const scoreText = new PIXI.Text(`スコア: ${score}`, {
+    fontFamily: 'Arial',
+    fontSize: 24,
+    fill: '#ffffff',
+    stroke: '#000000',
+    strokeThickness: 4,
+  } as any);
+  scoreText.x = 20;
+  scoreText.y = 20;
+  app.stage.addChild(scoreText);
+
+  function nextRound(increaseScore: boolean) {
+    if (!isFirstRound && increaseScore) {
+      score += 1; // 🎯 2回目以降のラウンドで正解ならスコアを増やす
+    }
+    isFirstRound = false; // 🎯 次のラウンドではスコアを増やすようにする
+
+    scoreText.text = `スコア: ${score}`; // 🎯 スコア表示を更新
+
+    app.stage.removeChildren(); // 🎯 画面をクリア
+    app.stage.addChild(scoreText); // 🎯 スコア表示を維持
+
+    const targetShape = createShape(app); // 🎯 新しいお題を生成
+    initGame(app, targetShape, nextRound); // 🎯 次のラウンド開始
+  }
+
+  // 🎯 最初のラウンド開始（スコアを増やさずにスタート）
+  nextRound(true);
 }
 
 startApp();

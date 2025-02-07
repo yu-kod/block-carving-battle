@@ -1,16 +1,19 @@
 import * as PIXI from 'pixi.js';
 
-export function showClearMessage(app: PIXI.Application) {
+export function updateScore(app: PIXI.Application, score: number): PIXI.Text {
     const style = new PIXI.TextStyle({
         fontFamily: 'Arial',
-        fontSize: 36,
+        fontSize: 24,
         fill: '#ffffff',
         stroke: '#000000',
         strokeThickness: 4,
-    });
+    } as any);
 
-    const victoryText = new PIXI.Text('🎉 クリア！', style);
-    victoryText.x = app.screen.width / 2 - victoryText.width / 2;
-    victoryText.y = 500;
-    app.stage.addChild(victoryText);
+    const scoreText = new PIXI.Text(`スコア: ${score}`, style);
+    scoreText.x = 20;
+    scoreText.y = 20;
+
+    app.stage.addChild(scoreText);
+    return scoreText;
 }
+

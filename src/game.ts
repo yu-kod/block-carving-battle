@@ -3,7 +3,7 @@ import * as PIXI from 'pixi.js';
 export function initGame(
     app: PIXI.Application,
     targetShape: boolean[][],
-    onClear: (app: PIXI.Application) => void // 🎯 app を引数に追加
+    onClear: (increaseScore: boolean) => void // 🎯 スコアを増やすかのフラグを追加
 ) {
     const shapeSize = targetShape.length; // 🎯 お題と同じサイズのグリッドを生成
     const blockSize = 50;
@@ -31,7 +31,7 @@ export function initGame(
             (block as any).buttonMode = true;
             block.on('pointerdown', () => {
                 block.visible = false;
-                checkVictory(blocks, targetShape, () => onClear(app)); // 🎯 app を渡す
+                checkVictory(blocks, targetShape, onClear);
             });
 
             gridContainer.addChild(block);
@@ -40,13 +40,13 @@ export function initGame(
     }
 }
 
-// 🎯 追加: 勝利判定関数
 function checkVictory(
     blocks: PIXI.Graphics[][],
     targetShape: boolean[][],
-    onClear: () => void
+    onClear: (increaseScore: boolean) => void
 ) {
     let cleared = true;
+    let mistake = false; // 🎯 間違ったブロックを壊したかチェック
 
     for (let row = 0; row < targetShape.length; row++) {
         for (let col = 0; col < targetShape[row].length; col++) {
@@ -54,7 +54,7 @@ function checkVictory(
 
             if (targetShape[row][col]) {
                 if (!block.visible) {
-                    cleared = false;
+                    mistake = true; // 🎯 残すべきブロックが壊された
                 }
             } else {
                 if (block.visible) {
@@ -64,7 +64,9 @@ function checkVictory(
         }
     }
 
-    if (cleared) {
-        onClear(); // 🎯 app を引数に渡して呼び出す
+    if (mistake) {
+        onClear(false); // 🎯 間違えたらスコアを増やさず次へ
+    } else if (cleared) {
+        onClear(true); // 🎯 正解ならスコアを増やす
     }
 }
