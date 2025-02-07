@@ -52,4 +52,4 @@ block-carving-battle/
 
 ## ライセンス
 このプロジェクトはMITライセンスのもとで提供されています。
-詳細は LICENSE ファイルをご覧ください。
+詳細は [LICENSE](https://github.com/yu-kod/block-carving-battle/blob/main/LICENSE) ファイルをご覧ください。
