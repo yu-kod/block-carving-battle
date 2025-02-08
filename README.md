@@ -46,10 +46,6 @@ block-carving-battle/
 └── README.md             # このREADMEファイル
 ```
 
-## 貢献
-貢献は大歓迎です！
-プルリクエストやIssueを通じて、バグ報告や機能改善の提案をお待ちしております。
-
 ## ライセンス
 このプロジェクトはMITライセンスのもとで提供されています。
 詳細は [LICENSE](https://github.com/yu-kod/block-carving-battle/blob/main/LICENSE) ファイルをご覧ください。
