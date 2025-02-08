@@ -6,7 +6,14 @@ export function createShape(app: PIXI.Application): boolean[][] {
     const gap = 2;
     const targetShape: boolean[][] = [];
 
+    // 🎯 既存のお題 (`shapeContainer`) を削除してから新しく生成
+    let existingShape = app.stage.getChildByName("shapeContainer");
+    if (existingShape) {
+        existingShape.destroy({ children: true });
+    }
+
     const shapeContainer = new PIXI.Container();
+    shapeContainer.name = "shapeContainer"; // 🎯 名前をつけて管理しやすくする
     app.stage.addChild(shapeContainer);
 
     for (let row = 0; row < shapeSize; row++) {

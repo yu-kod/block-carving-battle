@@ -1,49 +1,71 @@
 import * as PIXI from 'pixi.js';
-import { initGame } from './game';
+import { Game } from './game';
 import { createShape } from './shape';
 
+let gameInstance: Game | null = null;
+
 async function startApp() {
-  // PixiJSの初期化
-  const app = new PIXI.Application();
-  await app.init({
-    width: 800,
-    height: 600,
-    backgroundColor: 0x1099bb,
-  });
-  document.body.appendChild(app.canvas);
+    // PixiJSの初期化
+    const app = new PIXI.Application();
+    await app.init({
+        width: 800,
+        height: 600,
+        backgroundColor: 0x1099bb,
+    });
+    document.body.appendChild(app.canvas);
 
-  let score = 0; // 🎯 スコア変数（0から始まる）
-  let isFirstRound = true; // 🎯 最初のラウンドかどうか判定
+    let score = 0;
+    let roundInProgress = false;
 
-  // 🎯 スコア表示テキスト（1回だけ作る）
-  const scoreText = new PIXI.Text(`スコア: ${score}`, {
-    fontFamily: 'Arial',
-    fontSize: 24,
-    fill: '#ffffff',
-    stroke: '#000000',
-    strokeThickness: 4,
-  } as any);
-  scoreText.x = 20;
-  scoreText.y = 20;
-  app.stage.addChild(scoreText);
+    const scoreText = new PIXI.Text(`スコア: ${score}`, {
+        fontFamily: 'Arial',
+        fontSize: 24,
+        fill: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 4,
+    } as any);
+    scoreText.x = 20;
+    scoreText.y = 20;
+    app.stage.addChild(scoreText);
 
-  function nextRound(increaseScore: boolean) {
-    if (!isFirstRound && increaseScore) {
-      score += 1; // 🎯 2回目以降のラウンドで正解ならスコアを増やす
+    function nextRound(increaseScore: boolean) {
+        if (roundInProgress) return;
+        roundInProgress = true;
+
+        if (increaseScore) {
+            score += 1;
+        }
+
+        scoreText.text = `スコア: ${score}`;
+        app.stage.removeChildren();
+        app.stage.addChild(scoreText);
+
+        // 🎯 前回の Game インスタンスを削除してから新しいラウンドを開始
+        if (gameInstance) {
+            gameInstance.destroy();
+            gameInstance = null;
+        }
+
+        const targetShape = createShape(app);
+        gameInstance = new Game(app, targetShape, nextRound);
+
+        roundInProgress = false;
     }
-    isFirstRound = false; // 🎯 次のラウンドではスコアを増やすようにする
 
-    scoreText.text = `スコア: ${score}`; // 🎯 スコア表示を更新
+    // 🎯 キーイベントは `main.ts` で 1 回だけ設定する
+    window.addEventListener('keydown', (event) => {
+        if (gameInstance) {
+            gameInstance.handleKeyDown(event);
+        }
+    });
 
-    app.stage.removeChildren(); // 🎯 画面をクリア
-    app.stage.addChild(scoreText); // 🎯 スコア表示を維持
+    window.addEventListener('keyup', (event) => {
+        if (gameInstance) {
+            gameInstance.handleKeyUp(event);
+        }
+    });
 
-    const targetShape = createShape(app); // 🎯 新しいお題を生成
-    initGame(app, targetShape, nextRound); // 🎯 次のラウンド開始
-  }
-
-  // 🎯 最初のラウンド開始（スコアを増やさずにスタート）
-  nextRound(true);
+    nextRound(true);
 }
 
 startApp();
