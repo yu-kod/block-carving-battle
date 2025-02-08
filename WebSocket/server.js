@@ -2,38 +2,46 @@ import { WebSocketServer } from 'ws';
 
 const wss = new WebSocketServer({ port: 8080 });
 
-let players = [];
+let waitingPlayer = null;
 
 wss.on('connection', (ws) => {
     console.log('🚀 プレイヤーが接続しました');
 
-    if (players.length < 2) {
-        players.push(ws);
-    } else {
-        ws.send(JSON.stringify({ type: 'error', message: 'プレイヤー数の上限に達しました' }));
-        ws.close();
-        return;
-    }
-
     ws.on('message', (message) => {
-    const data = JSON.parse(message);
-    console.log(`📩 メッセージ受信: ${JSON.stringify(data)}`);
+        console.log(`📩 メッセージ受信: ${message}`); // 🎯 受信データのログを追加
 
-    if (data.type === "score_update") {
-        console.log(`🎯 スコア更新: ${data.score}`);
-    }
+        try {
+            const data = JSON.parse(message);
 
-    players.forEach((player) => {
-        if (player !== ws) {
-            player.send(JSON.stringify(data));
+            if (data.type === "join_lobby") {
+                console.log("🛠 クライアントがロビーに参加しました");
+
+                if (waitingPlayer) {
+                    console.log("🎯 マッチング成功！");
+                    ws.send(JSON.stringify({ type: "match_found", serverUrl: "ws://localhost:8080", opponentId: 1 }));
+                    waitingPlayer.send(JSON.stringify({ type: "match_found", serverUrl: "ws://localhost:8080", opponentId: 2 }));
+                    waitingPlayer = null;
+                } else {
+                    waitingPlayer = ws;
+                    console.log("⏳ プレイヤーがロビーに待機中...");
+                }
+            } else if (data.type === "score_update") {
+                console.log("スコア:", data.score);
+            }
+        } catch (error) {
+            console.error("⚠️ メッセージ解析エラー:", error);
         }
     });
-});
 
+    ws.on('error', (error) => {
+        console.error("⚠️ WebSocket サーバーエラー:", error);
+    });
 
     ws.on('close', () => {
         console.log('❌ プレイヤーが切断されました');
-        players = players.filter((player) => player !== ws);
+        if (waitingPlayer === ws) {
+            waitingPlayer = null;
+        }
     });
 });
 
