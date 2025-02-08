@@ -16,4 +16,3 @@ export function updateScore(app: PIXI.Application, score: number): PIXI.Text {
     app.stage.addChild(scoreText);
     return scoreText;
 }
-

@@ -1,35 +1,100 @@
 import * as PIXI from 'pixi.js';
+import { Network } from './network';
 
 export class Game {
     private app: PIXI.Application;
-    private targetShape: boolean[][];
+    private network: Network;
     private onClear: (increaseScore: boolean) => void;
     private gridContainer: PIXI.Container;
+    private opponentGrid: PIXI.Container;
+    private opponentScoreText: PIXI.Text;
     private blocks: PIXI.Graphics[][] = [];
+    private targetShape: boolean[][];
     private selectedRow: number = 0;
     private selectedCol: number = 0;
     private isKeyDown: boolean = false;
     private mistakeMade: boolean = false;
     private remainingBlocks: number = 0;
+    private playerScore: number = 0;
+    private opponentScore: number = 0;
 
-    constructor(app: PIXI.Application, targetShape: boolean[][], onClear: (increaseScore: boolean) => void) {
+    constructor(app: PIXI.Application, serverUrl: string, targetShape: boolean[][], onClear: (increaseScore: boolean) => void) {
         this.app = app;
+        this.network = new Network(serverUrl, this.handleNetworkMessage.bind(this));
         this.targetShape = targetShape;
         this.onClear = onClear;
         this.gridContainer = new PIXI.Container();
-        this.gridContainer.name = 'gridContainer';
+        this.opponentGrid = new PIXI.Container();
+
+        this.opponentScoreText = new PIXI.Text(`相手のスコア: 0`, {
+            fontFamily: 'Arial',
+            fontSize: 24,
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 4,
+        } as any);
+        this.opponentScoreText.x = this.app.screen.width - 200;
+        this.opponentScoreText.y = 20;
+        this.app.stage.addChild(this.opponentScoreText);
+
         this.app.stage.addChild(this.gridContainer);
+        this.app.stage.addChild(this.opponentGrid);
+
         this.countRemainingBlocks();
         this.initBlocks();
+        this.initOpponentBoard();
         this.highlightSelectedBlock();
-
-        console.log("🔍 正解のブロックパターン:");
-        console.table(this.targetShape);
     }
 
+    private initOpponentBoard() {
+        this.opponentGrid.x = this.app.screen.width / 2 + 100;
+        this.opponentGrid.y = 300;
+    }
+
+    private handleNetworkMessage(data: any) {
+        if (data.type === "block_update" && data.blocks) {
+            this.updateOpponentBoard(data.blocks);
+        } else {
+            console.warn("⚠️ 不正なブロックデータを受信:", data);
+        }
+        if (data.type === "score_update" && typeof data.score === "number") {
+            if (data.score >= 0) {
+                this.opponentScore = data.score;
+                this.opponentScoreText.text = `相手のスコア: ${this.opponentScore}`;
+            } else {
+                console.warn("⚠️ 不正なスコアデータを受信:", data);
+            }
+        }
+    }
+
+    private updateOpponentBoard(blocks: boolean[][] | undefined) {
+    if (!blocks || !Array.isArray(blocks)) {
+        console.warn("⚠️ 受信したブロックデータが不正です:", blocks);
+        return;
+    }
+
+    this.opponentGrid.removeChildren();
+
+    for (let row = 0; row < blocks.length; row++) {
+        for (let col = 0; col < blocks[row].length; col++) {
+            if (!blocks[row][col]) continue;
+
+            const block = new PIXI.Graphics();
+            block.beginFill(0x00ff00);
+            block.drawRect(0, 0, 50, 50);
+            block.endFill();
+
+            block.x = col * 52;
+            block.y = row * 52;
+            this.opponentGrid.addChild(block);
+        }
+    }
+}
+
     public destroy() {
-        console.log("🛠 Game インスタンスを破棄");
+        console.log("Game インスタンスを破棄");
         this.app.stage.removeChild(this.gridContainer);
+        this.app.stage.removeChild(this.opponentGrid);
     }
 
     private countRemainingBlocks() {
@@ -67,7 +132,7 @@ export class Game {
     }
 
     public handleKeyDown(event: KeyboardEvent) {
-        console.log(`🛠 handleKeyDown 実行: ${event.key}`);
+        console.log(`handleKeyDown 実行: ${event.key}`);
 
         if (event.key === 'ArrowLeft') this.moveSelection(-1, 0);
         if (event.key === 'ArrowRight') this.moveSelection(1, 0);
@@ -104,29 +169,35 @@ export class Game {
         this.blocks[this.selectedRow][this.selectedCol].clear();
         this.blocks[this.selectedRow][this.selectedCol].beginFill(0xffff00).drawRect(0, 0, 50, 50).endFill();
     }
+    private sendScoreUpdate() {
+        this.network.sendScoreUpdate(this.playerScore);
+    }
 
     private removeSelectedBlock() {
-        if (!this.blocks[this.selectedRow][this.selectedCol].visible) return;
+    if (!this.blocks[this.selectedRow][this.selectedCol].visible) return;
 
-        console.log(`🛠 removeSelectedBlock() 実行: (${this.selectedRow}, ${this.selectedCol})`);
+    this.blocks[this.selectedRow][this.selectedCol].visible = false;
+    this.isKeyDown = true;
 
-        this.blocks[this.selectedRow][this.selectedCol].visible = false;
-        this.isKeyDown = true;
+    this.network.send({
+        type: "block_update",
+        row: this.selectedRow,
+        col: this.selectedCol,
+    });
 
-        if (!this.targetShape[this.selectedRow][this.selectedCol]) {
-            this.remainingBlocks--;
-            console.log(`✅ 正しいブロックを削除: (${this.selectedRow}, ${this.selectedCol}) 残り: ${this.remainingBlocks}`);
+    if (!this.targetShape[this.selectedRow][this.selectedCol]) {
+        this.remainingBlocks--;
 
-            if (this.remainingBlocks === 0) {
-                console.log("🏆 すべてのブロックを正しく削除！クリア！");
-                this.onClear(true);
-            }
-        } else {
-            if (!this.mistakeMade) {
-                this.mistakeMade = true;
-                console.log(`❌ ミス！ (${this.selectedRow}, ${this.selectedCol}) のブロックを誤って削除しました`);
-                this.onClear(false);
-            }
+        if (this.remainingBlocks === 0) {
+            this.playerScore += 1; // 🎯 スコア更新
+            this.onClear(true);
+            this.sendScoreUpdate(); // 🎯 すぐに送信
+        }
+    } else {
+        if (!this.mistakeMade) {
+            this.mistakeMade = true;
+            this.onClear(false);
         }
     }
+}
 }
