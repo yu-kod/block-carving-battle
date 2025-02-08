@@ -3,9 +3,11 @@ import { Game } from './game';
 import { createShape } from './shape';
 
 let gameInstance: Game | null = null;
+let score = 0; 
+let roundInProgress = false;
 
 async function startApp() {
-    // PixiJSの初期化
+    
     const app = new PIXI.Application();
     await app.init({
         width: 800,
@@ -13,9 +15,6 @@ async function startApp() {
         backgroundColor: 0x1099bb,
     });
     document.body.appendChild(app.canvas);
-
-    let score = 0;
-    let roundInProgress = false;
 
     const scoreText = new PIXI.Text(`スコア: ${score}`, {
         fontFamily: 'Arial',
@@ -32,27 +31,31 @@ async function startApp() {
         if (roundInProgress) return;
         roundInProgress = true;
 
+        
         if (increaseScore) {
             score += 1;
+            scoreText.text = `スコア: ${score}`;
         }
 
-        scoreText.text = `スコア: ${score}`;
         app.stage.removeChildren();
         app.stage.addChild(scoreText);
 
-        // 🎯 前回の Game インスタンスを削除してから新しいラウンドを開始
+        
         if (gameInstance) {
             gameInstance.destroy();
             gameInstance = null;
         }
 
         const targetShape = createShape(app);
-        gameInstance = new Game(app, targetShape, nextRound);
+        const serverUrl = "ws://localhost:8080"; // ローカル WebSocket サーバーの URL
+        gameInstance = new Game(app, serverUrl, targetShape, nextRound);
 
         roundInProgress = false;
     }
 
-    // 🎯 キーイベントは `main.ts` で 1 回だけ設定する
+    
+    nextRound(false);
+
     window.addEventListener('keydown', (event) => {
         if (gameInstance) {
             gameInstance.handleKeyDown(event);
@@ -64,8 +67,6 @@ async function startApp() {
             gameInstance.handleKeyUp(event);
         }
     });
-
-    nextRound(true);
 }
 
 startApp();
